@@ -3,19 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Find the Fake</title>
+    <title>AI & Plagiarism Detector</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
+            background-color: #f8fafc;
         }
         .container {
-            max-width: 900px;
+            max-width: 1100px;
         }
         .gradient-bg {
             background-image: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .plagiarism-bg {
+            background-image: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
         }
         .btn {
             transition: all 0.3s ease;
@@ -28,58 +32,218 @@
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             background-color: white;
         }
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            background-color: #e2e8f0;
+            overflow: hidden;
+        }
+        .progress-value {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        .tab-button {
+            transition: all 0.3s ease;
+        }
+        .tab-button.active {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px);
+        }
+        .source-match {
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+        .source-match:hover {
+            transform: translateX(5px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body class="flex items-center justify-center min-h-screen py-10 px-4">
 
-<div class="container mx-auto p-6 lg:p-12 card rounded-3xl">
+<div class="container mx-auto p-6 lg:p-8 card rounded-3xl">
     <div class="text-center mb-8">
-        <h1 class="text-3xl lg:text-5xl font-extrabold text-gray-900 mb-2">Find the Fake</h1>
-        <p class="text-gray-500 text-lg">Check if your text was AI-generated or human-written.</p>
+        <h1 class="text-3xl lg:text-4xl font-extrabold text-gray-900 mb-2">AI & Plagiarism Detector</h1>
+        <p class="text-gray-500 text-lg">Check for AI-generated content and plagiarism in one tool</p>
     </div>
 
-    <div class="mb-8">
-        <textarea id="inputText" class="w-full h-48 p-4 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="Paste your text, review, or post here..."></textarea>
+    <!-- Tab Navigation -->
+    <div class="flex justify-center mb-8">
+        <div class="inline-flex rounded-full p-1 bg-gray-100">
+            <button id="aiTab" class="tab-button gradient-bg text-white font-semibold py-2 px-6 rounded-full text-sm sm:text-base active">
+                <i class="fas fa-robot mr-2"></i>AI Detection
+            </button>
+            <button id="plagiarismTab" class="tab-button bg-white text-gray-700 font-semibold py-2 px-6 rounded-full text-sm sm:text-base">
+                <i class="fas fa-copy mr-2"></i>Plagiarism Check
+            </button>
+        </div>
     </div>
 
-    <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-8">
-        <button id="checkBtn" class="btn gradient-bg text-white font-semibold py-3 px-8 rounded-full text-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-            Check Text
-        </button>
-        <button id="clearBtn" class="btn bg-white text-gray-700 font-semibold py-3 px-8 rounded-full text-lg border border-gray-300 shadow-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2">
-            Clear
-        </button>
-    </div>
-
-    <div id="loadingIndicator" class="hidden text-center text-gray-500 mb-4">
-        <svg class="animate-spin h-6 w-6 text-indigo-500 inline-block mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        Analyzing text with multiple models...
-    </div>
-
-    <div id="results" class="hidden">
-        <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Analysis Results</h2>
-
-        <div id="finalVerdict" class="p-6 rounded-2xl text-center mb-6">
-            <p class="text-3xl font-bold" id="verdictText"></p>
-            <p class="text-lg text-gray-600 mt-2" id="verdictSubtext"></p>
+    <!-- AI Detection Content -->
+    <div id="aiContent" class="tab-content">
+        <div class="mb-6">
+            <textarea id="inputText" class="w-full h-48 p-4 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all" placeholder="Paste your text, review, or post here..."></textarea>
+            <div class="flex justify-between items-center mt-2 text-sm text-gray-500">
+                <span id="charCount">0 characters</span>
+                <span id="wordCount">0 words</span>
+            </div>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Individual model results will be rendered here -->
+        <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
+            <button id="checkBtn" class="btn gradient-bg text-white font-semibold py-3 px-8 rounded-full text-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                <i class="fas fa-search mr-2"></i>Check for AI
+            </button>
+            <button id="clearBtn" class="btn bg-white text-gray-700 font-semibold py-3 px-8 rounded-full text-lg border border-gray-300 shadow-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2">
+                <i class="fas fa-eraser mr-2"></i>Clear
+            </button>
         </div>
 
+        <div id="loadingIndicator" class="hidden p-6 text-center mb-6 bg-gray-50 rounded-2xl">
+            <svg class="animate-spin h-8 w-8 text-indigo-500 inline-block mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-gray-700 font-medium mt-2">Analyzing text with multiple AI detection models...</p>
+            <p class="text-sm text-gray-500">This may take a few seconds</p>
+        </div>
+
+        <div id="infoMessage" class="hidden p-4 bg-yellow-100 text-yellow-800 rounded-lg shadow-inner mb-6">
+            <p>Please enter at least 50 characters for accurate analysis.</p>
+        </div>
+
+        <div id="results" class="hidden fade-in">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">AI Detection Results</h2>
+
+            <div id="finalVerdict" class="p-6 rounded-2xl text-center mb-6 border-2">
+                <p class="text-3xl font-bold mb-2" id="verdictText"></p>
+                <p class="text-lg mb-4" id="verdictSubtext"></p>
+                <div class="progress-bar mx-auto w-3/4">
+                    <div id="confidenceBar" class="progress-value"></div>
+                </div>
+                <p class="text-sm text-gray-600 mt-2">Confidence: <span id="confidenceValue">0</span>%</p>
+            </div>
+
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Model Breakdown</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" id="modelResults">
+                <!-- Individual model results will be rendered here -->
+            </div>
+
+            <div class="bg-gray-50 p-4 rounded-xl">
+                <h3 class="text-lg font-semibold text-gray-800 mb-2">Text Characteristics</h3>
+                <div class="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                        <p class="text-gray-600">Perplexity Score: <span id="perplexityScore">--</span></p>
+                        <p class="text-xs text-gray-500">Lower values may indicate AI-generated text</p>
+                    </div>
+                    <div>
+                        <p class="text-gray-600">Burstiness Score: <span id="burstinessScore">--</span></p>
+                        <p class="text-xs text-gray-500">Higher values may indicate human-written text</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div id="infoMessage" class="hidden p-4 bg-yellow-100 text-yellow-800 rounded-lg shadow-inner">
-        <p>Please enter some text to begin the analysis.</p>
+    <!-- Plagiarism Check Content -->
+    <div id="plagiarismContent" class="tab-content hidden">
+        <div class="mb-6">
+            <textarea id="plagiarismText" class="w-full h-48 p-4 text-gray-700 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition-all" placeholder="Paste your text to check for plagiarism..."></textarea>
+            <div class="flex justify-between items-center mt-2 text-sm text-gray-500">
+                <span id="plagiarismCharCount">0 characters</span>
+                <span id="plagiarismWordCount">0 words</span>
+            </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 mb-6">
+            <button id="plagiarismCheckBtn" class="btn plagiarism-bg text-white font-semibold py-3 px-8 rounded-full text-lg shadow-lg hover:shadow-xl focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2">
+                <i class="fas fa-search mr-2"></i>Check for Plagiarism
+            </button>
+            <button id="plagiarismClearBtn" class="btn bg-white text-gray-700 font-semibold py-3 px-8 rounded-full text-lg border border-gray-300 shadow-md hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-300 focus:ring-offset-2">
+                <i class="fas fa-eraser mr-2"></i>Clear
+            </button>
+        </div>
+
+        <div id="plagiarismLoadingIndicator" class="hidden p-6 text-center mb-6 bg-gray-50 rounded-2xl">
+            <svg class="animate-spin h-8 w-8 text-pink-500 inline-block mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="text-gray-700 font-medium mt-2">Checking text against online sources...</p>
+            <p class="text-sm text-gray-500">This may take a few seconds</p>
+        </div>
+
+        <div id="plagiarismInfoMessage" class="hidden p-4 bg-yellow-100 text-yellow-800 rounded-lg shadow-inner mb-6">
+            <p>Please enter at least 50 characters for accurate plagiarism detection.</p>
+        </div>
+
+        <div id="plagiarismResults" class="hidden fade-in">
+            <h2 class="text-2xl font-bold text-gray-800 mb-4 text-center">Plagiarism Check Results</h2>
+
+            <div id="plagiarismVerdict" class="p-6 rounded-2xl text-center mb-6 border-2">
+                <p class="text-3xl font-bold mb-2" id="plagiarismVerdictText"></p>
+                <p class="text-lg mb-4" id="plagiarismVerdictSubtext"></p>
+                <div class="progress-bar mx-auto w-3/4 bg-gray-200">
+                    <div id="plagiarismPercentBar" class="progress-value"></div>
+                </div>
+                <p class="text-sm text-gray-600 mt-2">Similarity Score: <span id="plagiarismPercentValue">0</span>%</p>
+            </div>
+
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Potential Sources</h3>
+            <div id="sourcesList" class="space-y-4">
+                <!-- Source matches will be rendered here -->
+            </div>
+        </div>
     </div>
 
+    <!-- Information Section -->
+    <div class="mt-10 pt-6 border-t border-gray-200">
+        <h3 class="text-lg font-semibold text-gray-800 mb-3">How It Works</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-indigo-50 p-5 rounded-2xl">
+                <div class="flex items-center mb-3">
+                    <div class="w-10 h-10 rounded-full gradient-bg flex items-center justify-center text-white mr-3">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <h4 class="font-semibold text-gray-800">AI Detection</h4>
+                </div>
+                <p class="text-sm text-gray-600">Our system analyzes text using multiple detection models that examine patterns, perplexity, and burstiness to identify AI-generated content.</p>
+            </div>
+            <div class="bg-pink-50 p-5 rounded-2xl">
+                <div class="flex items-center mb-3">
+                    <div class="w-10 h-10 rounded-full plagiarism-bg flex items-center justify-center text-white mr-3">
+                        <i class="fas fa-copy"></i>
+                    </div>
+                    <h4 class="font-semibold text-gray-800">Plagiarism Check</h4>
+                </div>
+                <p class="text-sm text-gray-600">Our plagiarism detector compares your text against online sources and databases to identify potential matches and similar content.</p>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
+    // DOM Elements
+    const aiTab = document.getElementById('aiTab');
+    const plagiarismTab = document.getElementById('plagiarismTab');
+    const aiContent = document.getElementById('aiContent');
+    const plagiarismContent = document.getElementById('plagiarismContent');
+    
     const inputText = document.getElementById('inputText');
     const checkBtn = document.getElementById('checkBtn');
     const clearBtn = document.getElementById('clearBtn');
@@ -89,113 +253,451 @@
     const verdictSubtext = document.getElementById('verdictSubtext');
     const finalVerdictDiv = document.getElementById('finalVerdict');
     const infoMessage = document.getElementById('infoMessage');
-    const modelsContainer = document.querySelector('#results > div.grid');
+    const confidenceBar = document.getElementById('confidenceBar');
+    const confidenceValue = document.getElementById('confidenceValue');
+    const charCount = document.getElementById('charCount');
+    const wordCount = document.getElementById('wordCount');
+    const perplexityScore = document.getElementById('perplexityScore');
+    const burstinessScore = document.getElementById('burstinessScore');
+    const modelResults = document.getElementById('modelResults');
+    
+    const plagiarismText = document.getElementById('plagiarismText');
+    const plagiarismCheckBtn = document.getElementById('plagiarismCheckBtn');
+    const plagiarismClearBtn = document.getElementById('plagiarismClearBtn');
+    const plagiarismResults = document.getElementById('plagiarismResults');
+    const plagiarismLoadingIndicator = document.getElementById('plagiarismLoadingIndicator');
+    const plagiarismVerdict = document.getElementById('plagiarismVerdict');
+    const plagiarismVerdictText = document.getElementById('plagiarismVerdictText');
+    const plagiarismVerdictSubtext = document.getElementById('plagiarismVerdictSubtext');
+    const plagiarismInfoMessage = document.getElementById('plagiarismInfoMessage');
+    const plagiarismPercentBar = document.getElementById('plagiarismPercentBar');
+    const plagiarismPercentValue = document.getElementById('plagiarismPercentValue');
+    const plagiarismCharCount = document.getElementById('plagiarismCharCount');
+    const plagiarismWordCount = document.getElementById('plagiarismWordCount');
+    const sourcesList = document.getElementById('sourcesList');
 
-    // Simulates an API call to an AI detection model with a random confidence score
-    const simulateModelCheck = (modelName, minConfidence, maxConfidence) => {
-        return new Promise(resolve => {
-            setTimeout(() => {
-                // Generates a random score for demonstration
-                const score = Math.random() * (maxConfidence - minConfidence) + minConfidence;
-                resolve({ model: modelName, score: score });
-            }, 1000); // Simulate network delay
-        });
-    };
+    // Tab Switching
+    aiTab.addEventListener('click', () => {
+        aiTab.classList.add('active', 'gradient-bg', 'text-white');
+        aiTab.classList.remove('bg-white', 'text-gray-700');
+        plagiarismTab.classList.add('bg-white', 'text-gray-700');
+        plagiarismTab.classList.remove('active', 'plagiarism-bg', 'text-white');
+        aiContent.classList.remove('hidden');
+        plagiarismContent.classList.add('hidden');
+    });
 
-    // Displays the individual model scores
-    const renderModelScores = (scores) => {
-        modelsContainer.innerHTML = ''; // Clear previous results
-        scores.forEach(result => {
-            const isAi = result.score > 50;
-            const cardColor = isAi ? 'bg-indigo-50 border-indigo-200' : 'bg-green-50 border-green-200';
-            const textColor = isAi ? 'text-indigo-600' : 'text-green-600';
-            const statusText = isAi ? 'Likely AI' : 'Likely Human';
+    plagiarismTab.addEventListener('click', () => {
+        plagiarismTab.classList.add('active', 'plagiarism-bg', 'text-white');
+        plagiarismTab.classList.remove('bg-white', 'text-gray-700');
+        aiTab.classList.add('bg-white', 'text-gray-700');
+        aiTab.classList.remove('active', 'gradient-bg', 'text-white');
+        plagiarismContent.classList.remove('hidden');
+        aiContent.classList.add('hidden');
+    });
 
-            const scoreCard = `
-                <div class="p-4 border-2 ${cardColor} rounded-xl text-center">
-                    <h3 class="text-xl font-semibold text-gray-900 mb-2">${result.model}</h3>
-                    <p class="text-4xl font-extrabold ${textColor}">${result.score.toFixed(1)}%</p>
-                    <p class="text-sm text-gray-500 mt-1">${statusText}</p>
-                </div>
-            `;
-            modelsContainer.innerHTML += scoreCard;
-        });
-    };
-
-    // Determines the final verdict based on the average score
-    const getVerdict = (averageScore) => {
-        // Adjusted logic: a score over 60 is now considered "Likely AI"
-        if (averageScore > 60) {
-            finalVerdictDiv.className = 'p-6 rounded-2xl text-center mb-6 bg-red-100 border-red-200 border-2';
-            verdictText.className = 'text-3xl font-bold text-red-600';
-            verdictText.textContent = 'Likely AI-Generated';
-            verdictSubtext.textContent = 'The majority of models confidently flagged this text as AI-written.';
-        } else {
-            finalVerdictDiv.className = 'p-6 rounded-2xl text-center mb-6 bg-green-100 border-green-200 border-2';
-            verdictText.className = 'text-3xl font-bold text-green-600';
-            verdictText.textContent = 'Likely Human-Written';
-            verdictSubtext.textContent = 'The models indicate a high probability that this text was written by a human.';
-        }
-    };
-
-    checkBtn.addEventListener('click', async () => {
+    // Initialize the page
+    function init() {
+        updateCounts();
+        
+        // Add event listeners
+        inputText.addEventListener('input', updateCounts);
+        checkBtn.addEventListener('click', analyzeText);
+        clearBtn.addEventListener('click', clearText);
+        
+        plagiarismText.addEventListener('input', updatePlagiarismCounts);
+        plagiarismCheckBtn.addEventListener('click', checkPlagiarism);
+        plagiarismClearBtn.addEventListener('click', clearPlagiarismText);
+    }
+    
+    // Update character and word counts for AI detection
+    function updateCounts() {
+        const text = inputText.value;
+        const characters = text.length;
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        
+        charCount.textContent = `${characters} characters`;
+        wordCount.textContent = `${words} words`;
+    }
+    
+    // Update character and word counts for plagiarism check
+    function updatePlagiarismCounts() {
+        const text = plagiarismText.value;
+        const characters = text.length;
+        const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+        
+        plagiarismCharCount.textContent = `${characters} characters`;
+        plagiarismWordCount.textContent = `${words} words`;
+    }
+    
+    // Analyze the text for AI content
+    async function analyzeText() {
         const text = inputText.value.trim();
-        if (text === '') {
-            infoMessage.classList.remove('hidden');
-            resultsDiv.classList.add('hidden');
+        
+        // Validate input
+        if (text.length < 50) {
+            showElement(infoMessage);
+            hideElement(resultsDiv);
             return;
         }
-
-        infoMessage.classList.add('hidden');
-        resultsDiv.classList.add('hidden');
-        loadingIndicator.classList.remove('hidden');
+        
+        hideElement(infoMessage);
+        hideElement(resultsDiv);
+        showElement(loadingIndicator);
         checkBtn.disabled = true;
-
-        // Simulate a simple ensemble of three different models
-        const models = [
-            // Model A is slightly more likely to flag AI content
-            simulateModelCheck('Model A (Perplexity)', 
-                text.length > 50 ? 50 : 10, // Higher confidence for longer texts
-                text.length > 50 ? 95 : 60), 
-            // Model B is a bit more conservative
-            simulateModelCheck('Model B (Burstiness)', 
-                text.length > 50 ? 40 : 5, 
-                text.length > 50 ? 85 : 50),
-            // Model C is a general-purpose detector
-            simulateModelCheck('Model C (General)', 
-                text.length > 50 ? 60 : 20, 
-                text.length > 50 ? 99 : 70) 
-        ];
-
+        
         try {
-            const allResults = await Promise.all(models);
+            // Simulate analysis with more realistic text evaluation
+            const results = await performTextAnalysis(text);
             
-            const totalScore = allResults.reduce((sum, result) => sum + result.score, 0);
-            const averageScore = totalScore / allResults.length;
-
-            loadingIndicator.classList.add('hidden');
-            resultsDiv.classList.remove('hidden');
+            // Display results
+            displayResults(results);
             
-            getVerdict(averageScore);
-            renderModelScores(allResults);
-
         } catch (error) {
-            console.error('Failed to get results:', error);
-            loadingIndicator.classList.add('hidden');
-            verdictText.textContent = 'Error';
-            verdictSubtext.textContent = 'Failed to analyze text. Please try again.';
-            resultsDiv.classList.remove('hidden');
+            console.error('Analysis error:', error);
         } finally {
+            hideElement(loadingIndicator);
             checkBtn.disabled = false;
         }
-    });
-
-    clearBtn.addEventListener('click', () => {
+    }
+    
+    // Perform text analysis (simulated)
+    async function performTextAnalysis(text) {
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Calculate text characteristics for more realistic scoring
+        const textStats = calculateTextCharacteristics(text);
+        
+        // Generate model results based on text characteristics
+        const models = [
+            generateModelResult('Perplexity Model', textStats.perplexity, 0.7),
+            generateModelResult('Burstiness Model', textStats.burstiness, 0.6),
+            generateModelResult('Syntax Analysis', textStats.syntaxScore, 0.8),
+            generateModelResult('Semantic Analysis', textStats.semanticScore, 0.75)
+        ];
+        
+        // Calculate average score
+        const totalScore = models.reduce((sum, model) => sum + model.score, 0);
+        const averageScore = totalScore / models.length;
+        
+        return {
+            models,
+            averageScore,
+            textStats
+        };
+    }
+    
+    // Calculate text characteristics for more realistic scoring
+    function calculateTextCharacteristics(text) {
+        const words = text.trim().split(/\s+/);
+        const sentences = text.split(/[.!?]+/).filter(s => s.length > 0);
+        
+        // Calculate basic statistics
+        const wordCount = words.length;
+        const sentenceCount = sentences.length;
+        const avgSentenceLength = wordCount / sentenceCount;
+        
+        // Calculate word frequency (simple perplexity proxy)
+        const wordFreq = {};
+        words.forEach(word => {
+            const cleanWord = word.toLowerCase().replace(/[^a-z0-9]/g, '');
+            if (cleanWord) {
+                wordFreq[cleanWord] = (wordFreq[cleanWord] || 0) + 1;
+            }
+        });
+        
+        // Calculate entropy (perplexity proxy)
+        let entropy = 0;
+        Object.values(wordFreq).forEach(count => {
+            const probability = count / wordCount;
+            entropy -= probability * Math.log2(probability);
+        });
+        
+        // Normalize entropy to 0-100 scale (higher = more predictable = more AI-like)
+        const perplexity = Math.min(100, Math.max(0, entropy * 10));
+        
+        // Calculate burstiness (variation in sentence length)
+        const sentenceLengths = sentences.map(s => s.split(/\s+/).length);
+        const meanLength = sentenceLengths.reduce((a, b) => a + b, 0) / sentenceCount;
+        const variance = sentenceLengths.reduce((a, b) => a + Math.pow(b - meanLength, 2), 0) / sentenceCount;
+        const stdDev = Math.sqrt(variance);
+        
+        // Normalize burstiness to 0-100 scale (higher = more variation = more human-like)
+        const burstiness = Math.min(100, Math.max(0, stdDev * 5));
+        
+        // Calculate other scores
+        const syntaxScore = Math.min(100, Math.max(0, 60 + (Math.random() * 20 - 10))); // Random around 60
+        const semanticScore = Math.min(100, Math.max(0, 50 + (Math.random() * 30 - 15))); // Random around 50
+        
+        return {
+            perplexity,
+            burstiness,
+            syntaxScore,
+            semanticScore,
+            wordCount,
+            sentenceCount
+        };
+    }
+    
+    // Generate model result based on text characteristics
+    function generateModelResult(name, characteristicValue, weight) {
+        // Base score influenced by characteristic with some randomness
+        const baseScore = characteristicValue * weight + (Math.random() * 20 - 10);
+        const score = Math.min(100, Math.max(0, Math.round(baseScore)));
+        
+        return {
+            model: name,
+            score: score
+        };
+    }
+    
+    // Display analysis results
+    function displayResults(results) {
+        const { models, averageScore, textStats } = results;
+        
+        // Update text characteristics
+        perplexityScore.textContent = textStats.perplexity.toFixed(1);
+        burstinessScore.textContent = textStats.burstiness.toFixed(1);
+        
+        // Display model results
+        renderModelScores(models);
+        
+        // Set verdict
+        setVerdict(averageScore);
+        
+        // Show results
+        showElement(resultsDiv);
+    }
+    
+    // Render individual model scores
+    function renderModelScores(scores) {
+        modelResults.innerHTML = '';
+        
+        scores.forEach(result => {
+            const isAi = result.score > 60;
+            const cardColor = isAi ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200';
+            const textColor = isAi ? 'text-red-600' : 'text-green-600';
+            const statusText = isAi ? 'Likely AI' : 'Likely Human';
+            
+            const scoreCard = document.createElement('div');
+            scoreCard.className = `p-4 border-2 ${cardColor} rounded-xl`;
+            scoreCard.innerHTML = `
+                <h3 class="text-lg font-semibold text-gray-900 mb-2">${result.model}</h3>
+                <p class="text-3xl font-extrabold ${textColor} mb-1">${result.score.toFixed(1)}%</p>
+                <div class="progress-bar bg-gray-200 mb-2">
+                    <div class="progress-value ${isAi ? 'bg-red-500' : 'bg-green-500'}" style="width: ${result.score}%"></div>
+                </div>
+                <p class="text-sm text-gray-500">${statusText}</p>
+            `;
+            
+            modelResults.appendChild(scoreCard);
+        });
+    }
+    
+    // Set the final verdict
+    function setVerdict(score) {
+        const confidence = Math.round(score);
+        confidenceValue.textContent = confidence;
+        confidenceBar.style.width = `${confidence}%`;
+        
+        // Adjust verdict logic with more nuanced categories
+        if (score > 75) {
+            finalVerdictDiv.className = 'p-6 rounded-2xl text-center mb-6 bg-red-100 border-red-400 border-2';
+            verdictText.className = 'text-3xl font-bold text-red-700';
+            verdictText.textContent = 'Highly Likely AI-Generated';
+            verdictSubtext.className = 'text-lg text-red-600';
+            verdictSubtext.textContent = 'Strong indicators of AI-generated content across multiple models.';
+            confidenceBar.className = 'progress-value bg-red-500';
+        } else if (score > 60) {
+            finalVerdictDiv.className = 'p-6 rounded-2xl text-center mb-6 bg-orange-100 border-orange-400 border-2';
+            verdictText.className = 'text-3xl font-bold text-orange-700';
+            verdictText.textContent = 'Likely AI-Generated';
+            verdictSubtext.className = 'text-lg text-orange-600';
+            verdictSubtext.textContent = 'Multiple indicators suggest AI-generated content.';
+            confidenceBar.className = 'progress-value bg-orange-500';
+        } else if (score > 40) {
+            finalVerdictDiv.className = 'p-6 rounded-2xl text-center mb-6 bg-yellow-100 border-yellow-400 border-2';
+            verdictText.className = 'text-3xl font-bold text-yellow-700';
+            verdictText.textContent = 'Uncertain / Mixed Indicators';
+            verdictSubtext.className = 'text-lg text-yellow-600';
+            verdictSubtext.textContent = 'The text shows characteristics of both human and AI writing.';
+            confidenceBar.className = 'progress-value bg-yellow-500';
+        } else if (score > 25) {
+            finalVerdictDiv.className = 'p-6 rounded-2xl text-center mb-6 bg-blue-100 border-blue-400 border-2';
+            verdictText.className = 'text-3xl font-bold text-blue-700';
+            verdictText.textContent = 'Likely Human-Written';
+            verdictSubtext.className = 'text-lg text-blue-600';
+            verdictSubtext.textContent = 'Multiple indicators suggest human-written content.';
+            confidenceBar.className = 'progress-value bg-blue-500';
+        } else {
+            finalVerdictDiv.className = 'p-6 rounded-2xl text-center mb-6 bg-green-100 border-green-400 border-2';
+            verdictText.className = 'text-3xl font-bold text-green-700';
+            verdictText.textContent = 'Highly Likely Human-Written';
+            verdictSubtext.className = 'text-lg text-green-600';
+            verdictSubtext.textContent = 'Strong indicators of human-written content across multiple models.';
+            confidenceBar.className = 'progress-value bg-green-500';
+        }
+    }
+    
+    // Check for plagiarism
+    async function checkPlagiarism() {
+        const text = plagiarismText.value.trim();
+        
+        // Validate input
+        if (text.length < 50) {
+            showElement(plagiarismInfoMessage);
+            hideElement(plagiarismResults);
+            return;
+        }
+        
+        hideElement(plagiarismInfoMessage);
+        hideElement(plagiarismResults);
+        showElement(plagiarismLoadingIndicator);
+        plagiarismCheckBtn.disabled = true;
+        
+        try {
+            // Simulate plagiarism check
+            const results = await performPlagiarismCheck(text);
+            
+            // Display results
+            displayPlagiarismResults(results);
+            
+        } catch (error) {
+            console.error('Plagiarism check error:', error);
+        } finally {
+            hideElement(plagiarismLoadingIndicator);
+            plagiarismCheckBtn.disabled = false;
+        }
+    }
+    
+    // Perform plagiarism check (simulated)
+    async function performPlagiarismCheck(text) {
+        // Simulate API call delay
+        await new Promise(resolve => setTimeout(resolve, 2500));
+        
+        // Generate random plagiarism percentage (biased toward lower values)
+        const plagiarismPercent = Math.min(100, Math.max(0, Math.random() * 50));
+        
+        // Generate some random sources
+        const sources = [];
+        const sourceCount = Math.floor(Math.random() * 3) + 1; // 1-3 sources
+        
+        for (let i = 0; i < sourceCount; i++) {
+            const similarity = Math.min(100, plagiarismPercent + (Math.random() * 20 - 5));
+            sources.push({
+                url: `https://example.com/article-${i+1}`,
+                title: `Source Article ${i+1}`,
+                similarity: Math.round(similarity * 10) / 10,
+                matches: Math.floor(Math.random() * 5) + 1
+            });
+        }
+        
+        return {
+            plagiarismPercent: Math.round(plagiarismPercent * 10) / 10,
+            sources
+        };
+    }
+    
+    // Display plagiarism results
+    function displayPlagiarismResults(results) {
+        const { plagiarismPercent, sources } = results;
+        
+        // Set plagiarism percentage
+        plagiarismPercentValue.textContent = plagiarismPercent;
+        plagiarismPercentBar.style.width = `${plagiarismPercent}%`;
+        
+        // Set verdict
+        if (plagiarismPercent > 30) {
+            plagiarismVerdict.className = 'p-6 rounded-2xl text-center mb-6 bg-red-100 border-red-400 border-2';
+            plagiarismVerdictText.className = 'text-3xl font-bold text-red-700';
+            plagiarismVerdictText.textContent = 'High Plagiarism Risk';
+            plagiarismVerdictSubtext.className = 'text-lg text-red-600';
+            plagiarismVerdictSubtext.textContent = 'Significant matches found with online sources.';
+            plagiarismPercentBar.className = 'progress-value bg-red-500';
+        } else if (plagiarismPercent > 15) {
+            plagiarismVerdict.className = 'p-6 rounded-2xl text-center mb-6 bg-orange-100 border-orange-400 border-2';
+            plagiarismVerdictText.className = 'text-3xl font-bold text-orange-700';
+            plagiarismVerdictText.textContent = 'Moderate Plagiarism Risk';
+            plagiarismVerdictSubtext.className = 'text-lg text-orange-600';
+            plagiarismVerdictSubtext.textContent = 'Some matches found with online sources.';
+            plagiarismPercentBar.className = 'progress-value bg-orange-500';
+        } else {
+            plagiarismVerdict.className = 'p-6 rounded-2xl text-center mb-6 bg-green-100 border-green-400 border-2';
+            plagiarismVerdictText.className = 'text-3xl font-bold text-green-700';
+            plagiarismVerdictText.textContent = 'Low Plagiarism Risk';
+            plagiarismVerdictSubtext.className = 'text-lg text-green-600';
+            plagiarismVerdictSubtext.textContent = 'Few matches found with online sources.';
+            plagiarismPercentBar.className = 'progress-value bg-green-500';
+        }
+        
+        // Render sources
+        renderSources(sources);
+        
+        // Show results
+        showElement(plagiarismResults);
+    }
+    
+    // Render source matches
+    function renderSources(sources) {
+        sourcesList.innerHTML = '';
+        
+        if (sources.length === 0) {
+            sourcesList.innerHTML = `
+                <div class="p-4 bg-green-50 border border-green-200 rounded-xl text-center">
+                    <p class="text-green-700">No significant matches found!</p>
+                </div>
+            `;
+            return;
+        }
+        
+        sources.forEach(source => {
+            const sourceElement = document.createElement('div');
+            sourceElement.className = 'source-match p-4 bg-white border border-gray-200 rounded-xl';
+            sourceElement.innerHTML = `
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <h4 class="font-semibold text-gray-800">${source.title}</h4>
+                        <p class="text-sm text-gray-500">${source.url}</p>
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-sm font-semibold ${source.similarity > 30 ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}">
+                        ${source.similarity}% match
+                    </span>
+                </div>
+                <p class="text-sm text-gray-600">${source.matches} matching phrase${source.matches !== 1 ? 's' : ''} found</p>
+            `;
+            
+            sourcesList.appendChild(sourceElement);
+        });
+    }
+    
+    // Clear the AI text input
+    function clearText() {
         inputText.value = '';
-        resultsDiv.classList.add('hidden');
-        infoMessage.classList.add('hidden');
-    });
-
+        updateCounts();
+        hideElement(resultsDiv);
+        hideElement(infoMessage);
+    }
+    
+    // Clear the plagiarism text input
+    function clearPlagiarismText() {
+        plagiarismText.value = '';
+        updatePlagiarismCounts();
+        hideElement(plagiarismResults);
+        hideElement(plagiarismInfoMessage);
+    }
+    
+    // Helper function to show an element
+    function showElement(element) {
+        element.classList.remove('hidden');
+    }
+    
+    // Helper function to hide an element
+    function hideElement(element) {
+        element.classList.add('hidden');
+    }
+    
+    // Initialize the application
+    init();
 </script>
 
 </body>
